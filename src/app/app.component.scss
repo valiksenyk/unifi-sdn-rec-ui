@@ -1,0 +1,11 @@
+.main-wrapp {
+  display: flex;
+  height: 100%;
+
+  app-left-panel {
+    width: 100%;
+  }
+  app-right-panel {
+    width: 350px;
+  }
+}

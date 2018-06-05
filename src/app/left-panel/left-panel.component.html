@@ -1,0 +1,8 @@
+<div *ngIf="resize" class="left-panel-wrapp" #canvasArea>
+  <ko-stage *ngIf="showCanvas" [config]="configStage">
+    <ko-layer>
+      <ko-circle [config]="configCircle" ></ko-circle>
+      <ko-image [config]="imageConfig" (dragend)="reCalculateCoverage($event)" (click)="handleClick($event)"></ko-image>
+    </ko-layer>
+  </ko-stage>
+</div>
