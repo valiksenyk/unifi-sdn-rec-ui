@@ -1,7 +1,10 @@
-import {AfterViewInit, Component, ElementRef, OnInit, ViewChild} from '@angular/core';
+import {AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {Observable} from "rxjs/Observable";
 import 'rxjs/add/observable/of';
 import * as Konva from "konva";
+import {KonvaComponent} from "ng2-konva";
+import {BehaviorSubject} from "rxjs/BehaviorSubject";
+import {CoverageCalculateService} from "../services/coverage-calculate.service";
 
 @Component({
   selector: 'app-left-panel',
@@ -11,20 +14,48 @@ import * as Konva from "konva";
     '(window:resize)': 'onResize()'
   }
 })
-export class LeftPanelComponent implements OnInit, AfterViewInit {
+export class LeftPanelComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @ViewChild('canvasArea') canvasArea: ElementRef;
-  imageObj = new Image();
-  showCanvas: boolean;
-  resize = true;
-  configStage;
+  @ViewChild('stage') stage: KonvaComponent;
+  @ViewChild('layer') layer: KonvaComponent;
+  @ViewChild('coverageCircle') coverageCircle: KonvaComponent;
+  public imageObj = new Image();
+  public showCanvas: boolean;
+  public resize = true;
+  public configStage;
+  public clients: Array<any> = [];
+  private _radius = 80;
 
 
-  constructor() {
+  constructor(private _coverageCalculateService: CoverageCalculateService) {
+    _coverageCalculateService.changeParamsSubject.subscribe((coverageRadius) => {
+      this.changeCoverageArea(coverageRadius);
+    });
     this.imageObj.src = '/assets/images/access-point.png'
   }
 
-  ngOnInit() {}
+  set radius(value: number) {
+    this._radius = value;
+  }
+
+  get radius(): number {
+    return this._radius;
+  }
+
+  ngOnInit() {
+      for (let n = 0; n < 10; n++) {
+        this.clients.push(
+          new BehaviorSubject({
+            x: Math.random() * 800,
+            y: Math.random() * 700,
+            radius: 7,
+            fill: 'red',
+            id: n
+          })
+        );
+      }
+  }
 
   ngAfterViewInit() {
     this.configStage = Observable.of({
@@ -34,11 +65,16 @@ export class LeftPanelComponent implements OnInit, AfterViewInit {
     this.showCanvas = true;
   }
 
-  public configCircle = Observable.of({
-    x: 300,
-    y: 200,
-    radius: 9,
-    fill: 'red',
+  public groupConfig = Observable.of({
+    draggable: true
+  });
+
+  public configCoverageCircle = Observable.of({
+    x: 90,
+    y: 90,
+    radius: this.radius,
+    fill: 'rgba(68, 137, 244, 0.4)',
+    id: 'coverageCircle'
   });
 
   public imageConfig = Observable.of({
@@ -47,15 +83,38 @@ export class LeftPanelComponent implements OnInit, AfterViewInit {
     image: this.imageObj,
     width: 80,
     height: 80,
-    draggable: true
   });
 
-  public handleClick(component) {
-    console.log('Hello Circle', component);
+  public moveCoverageArea(ngComponent: KonvaComponent) {
+    console.log(ngComponent.getStage());
+    const circle = ngComponent.getStage();
+    const cx = circle.attrs.x;
+    const cy = circle.attrs.y;
+
+    for (let item of this.clients) {
+      console.log(item.value.x);
+      if (cx <= item.value.x && cy <= item.value.y) {
+        if (item.value.x - cx <= this.radius && item.value.y - cy <= this.radius) {
+          const stage = this.stage.getStage();
+          let client = stage.find(`#${item.value.id}`)[0];
+          client.to({
+            fill: 'green'
+          });
+        }
+      }
+    }
+    console.log('recalculation');
+
   }
 
-  public reCalculateCoverage(component) {
-    console.log('recalculation');
+  public changeCoverageArea(radius) {
+    this.radius = radius;
+    const stage = this.stage.getStage();
+    let coverageCircle = stage.find('#coverageCircle')[0];
+    coverageCircle.to({
+      radius: radius
+    });
+    // this.moveCoverageArea(this.);
   }
 
   private onResize() {
@@ -67,6 +126,10 @@ export class LeftPanelComponent implements OnInit, AfterViewInit {
       this.resize = this.showCanvas = true;
     }, 100);
     console.log('resize');
+  }
+
+  ngOnDestroy() {
+    this._coverageCalculateService.changeParamsSubject.unsubscribe();
   }
 
 }

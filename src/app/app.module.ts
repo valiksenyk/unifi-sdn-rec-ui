@@ -6,6 +6,8 @@ import { RightPanelComponent } from './right-panel/right-panel.component';
 import { LeftPanelComponent } from './left-panel/left-panel.component';
 
 import { KonvaModule } from 'ng2-konva';
+import {CoverageCalculateService} from "./services/coverage-calculate.service";
+import {FormsModule} from "@angular/forms";
 
 @NgModule({
   declarations: [
@@ -14,10 +16,11 @@ import { KonvaModule } from 'ng2-konva';
     LeftPanelComponent
   ],
   imports: [
+    FormsModule,
     BrowserModule,
     KonvaModule
   ],
-  providers: [],
+  providers: [CoverageCalculateService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
