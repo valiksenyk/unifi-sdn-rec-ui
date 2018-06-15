@@ -8,17 +8,19 @@ import { LeftPanelComponent } from './left-panel/left-panel.component';
 import { KonvaModule } from 'ng2-konva';
 import {CoverageCalculateService} from "./services/coverage-calculate.service";
 import {FormsModule} from "@angular/forms";
+import {NumberToMeterPipe} from "./pipes/numberToMeter.pipe";
 
 @NgModule({
   declarations: [
     AppComponent,
     RightPanelComponent,
-    LeftPanelComponent
+    LeftPanelComponent,
+    NumberToMeterPipe
   ],
   imports: [
     FormsModule,
     BrowserModule,
-    KonvaModule
+    KonvaModule,
   ],
   providers: [CoverageCalculateService],
   bootstrap: [AppComponent]

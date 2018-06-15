@@ -18,21 +18,20 @@ export class LeftPanelComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @ViewChild('canvasArea') canvasArea: ElementRef;
   @ViewChild('stage') stage: KonvaComponent;
-  @ViewChild('layer') layer: KonvaComponent;
+  @ViewChild('group') group: KonvaComponent;
   @ViewChild('coverageCircle') coverageCircle: KonvaComponent;
   public imageObj = new Image();
-  public showCanvas: boolean;
-  public resize = true;
+  public showCanvas: boolean = false;
   public configStage;
   public clients: Array<any> = [];
-  private _radius = 80;
-
+  private _distanceCoefficient = 1000;
+  private _radius = this._coverageCalculateService.getDefault() * this._distanceCoefficient;
 
   constructor(private _coverageCalculateService: CoverageCalculateService) {
     _coverageCalculateService.changeParamsSubject.subscribe((coverageRadius) => {
-      this.changeCoverageArea(coverageRadius);
+      this.stage && this.changeCoverageArea(coverageRadius * this._distanceCoefficient);
     });
-    this.imageObj.src = '/assets/images/access-point.png'
+    this.imageObj.src = '/assets/images/access-point.png';
   }
 
   set radius(value: number) {
@@ -44,17 +43,17 @@ export class LeftPanelComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-      for (let n = 0; n < 10; n++) {
-        this.clients.push(
-          new BehaviorSubject({
-            x: Math.random() * 800,
-            y: Math.random() * 700,
-            radius: 7,
-            fill: 'red',
-            id: n
-          })
-        );
-      }
+    for (let n = 0; n < 10; n++) {
+      this.clients.push(
+        new BehaviorSubject({
+          x: Math.random() * 800,
+          y: Math.random() * 700,
+          radius: 7,
+          fill: 'red',
+          id: n
+        })
+      );
+    }
   }
 
   ngAfterViewInit() {
@@ -63,10 +62,33 @@ export class LeftPanelComponent implements OnInit, AfterViewInit, OnDestroy {
       height: this.canvasArea.nativeElement.clientHeight
     });
     this.showCanvas = true;
+    setTimeout(
+      () => this.moveCoverageArea(), 0 //just stack
+    )
   }
 
   public groupConfig = Observable.of({
-    draggable: true
+    draggable: true,
+    x: 300,
+    y: 300,
+    dragBoundFunc: (pos) => {
+      let newY = pos.y;
+      if (pos.y < 30) {
+        newY = 30;
+      } else if (pos.y > this.canvasArea.nativeElement.clientHeight) {
+        newY = this.canvasArea.nativeElement.clientHeight;
+      }
+      let newX = pos.x;
+      if (pos.x < 30) {
+        newX = 30;
+      } else if (pos.x > this.canvasArea.nativeElement.clientWidth) {
+        newX = this.canvasArea.nativeElement.clientWidth;
+      }
+      return {
+        x: newX,
+        y: newY
+      };
+    }
   });
 
   public configCoverageCircle = Observable.of({
@@ -74,7 +96,11 @@ export class LeftPanelComponent implements OnInit, AfterViewInit, OnDestroy {
     y: 90,
     radius: this.radius,
     fill: 'rgba(68, 137, 244, 0.4)',
-    id: 'coverageCircle'
+    id: 'coverageCircle',
+    offset: {
+      x: 90,
+      y: 90
+    }
   });
 
   public imageConfig = Observable.of({
@@ -83,28 +109,33 @@ export class LeftPanelComponent implements OnInit, AfterViewInit, OnDestroy {
     image: this.imageObj,
     width: 80,
     height: 80,
+    offset: {
+      x: 90,
+      y: 90
+    }
   });
 
-  public moveCoverageArea(ngComponent: KonvaComponent) {
-    console.log(ngComponent.getStage());
-    const circle = ngComponent.getStage();
-    const cx = circle.attrs.x;
-    const cy = circle.attrs.y;
+  public moveCoverageArea() {
+    const circle = this.group.getStage();
+    const cx = circle.attrs.x,
+      cy = circle.attrs.y;
 
     for (let item of this.clients) {
-      console.log(item.value.x);
-      if (cx <= item.value.x && cy <= item.value.y) {
-        if (item.value.x - cx <= this.radius && item.value.y - cy <= this.radius) {
-          const stage = this.stage.getStage();
-          let client = stage.find(`#${item.value.id}`)[0];
-          client.to({
-            fill: 'green'
-          });
-        }
+      const distance = Math.sqrt(Math.pow(item.value.x - cx, 2) + Math.pow(item.value.y - cy, 2)); //distance between 2 dot
+      if (distance <= this.radius) {
+        const stage = this.stage.getStage();
+        let client = stage.find(`#${item.value.id}`)[0];
+        client.to({
+          fill: 'green'
+        });
+      } else {
+        const stage = this.stage.getStage();
+        let client = stage.find(`#${item.value.id}`)[0];
+        client.to({
+          fill: 'red'
+        });
       }
     }
-    console.log('recalculation');
-
   }
 
   public changeCoverageArea(radius) {
@@ -114,18 +145,23 @@ export class LeftPanelComponent implements OnInit, AfterViewInit, OnDestroy {
     coverageCircle.to({
       radius: radius
     });
-    // this.moveCoverageArea(this.);
+    this.moveCoverageArea();
   }
 
-  private onResize() {
-    // let stage = new Konva.Stage({})
-    this.resize = this.showCanvas = false;
-    this.configStage.value.width = this.canvasArea.nativeElement.clientWidth;
-    this.configStage.value.height = this.canvasArea.nativeElement.clientHeight;
+  private onResize() { //todo need refactoring
+    const stage = this.stage.getStage();
     setTimeout(() => {
-      this.resize = this.showCanvas = true;
-    }, 100);
-    console.log('resize');
+      const width = this.canvasArea.nativeElement.clientWidth;
+      const height = this.canvasArea.nativeElement.clientHeight;
+      stage.widows = width;
+      stage.height = height;
+      stage.draw();
+      stage.to({
+        width: width,
+        height: height
+      });
+      this.moveCoverageArea();
+    }, 0)
   }
 
   ngOnDestroy() {

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import {Component} from '@angular/core';
 import {CoverageCalculateService} from "../services/coverage-calculate.service";
 
 @Component({
@@ -6,43 +6,36 @@ import {CoverageCalculateService} from "../services/coverage-calculate.service";
   templateUrl: './right-panel.component.html',
   styleUrls: ['./right-panel.component.scss']
 })
-export class RightPanelComponent implements OnInit {
+export class RightPanelComponent {
 
   public model;
   public previousParams;
-  private _defaultParams = {
-    tx: 4,
-    radio: 2.4
-  };
+  public distance: number = this._coverageCalculateService.distanceKm;
+  private _defaultParams = this._coverageCalculateService.defaultParams;
 
   constructor(private _coverageCalculateService: CoverageCalculateService) {
+    _coverageCalculateService.changeParamsSubject.subscribe((distance) => {
+      this.distance = distance;
+    });
     this.model = this._defaultParams;
     this.previousParams = this._defaultParams;
   }
 
-  ngOnInit() {}
-
   public save() {
-    this._coverageCalculateService.calculate(this.model);
+    this._coverageCalculateService.setParams(this.model);
   }
 
   public cancel() {
-    console.log('prev', this.previousParams);
-
-    // this.model = this.previousParams;
-    this.model = this._defaultParams;
-    console.log(this.model, this._defaultParams)
+    this.model.tx = localStorage.getItem('tx');
+    this.model.radio = localStorage.getItem('radio');
+    this._coverageCalculateService.setParams(this.model);
   }
 
-  public onTxChange(currentValue, event, type) {
-    // debugger;
-    // this.previousParams[type] = Object.assign({}, currentValue);
-    //   this.previousParams[type] = currentValue;
-    this.previousParams.tx = currentValue;
-      console.log(this.previousParams);
+  public onTxChange(currentValue) {
+    localStorage.setItem('tx', currentValue);
   }
 
-  public onRadioChange(currentValue, event) {
-    this.previousParams.radio = currentValue;
+  public onRadioChange(currentValue) {
+    localStorage.setItem('radio', currentValue);
   }
 }
