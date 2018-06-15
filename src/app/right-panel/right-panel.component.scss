@@ -73,4 +73,10 @@ span, select, label, input, button {
       }
     }
   }
+
+  .distance {
+    position: absolute;
+    bottom: 10px;
+    color: $font-gray;
+  }
 }
